@@ -93,3 +93,74 @@ JOIN cd.bookings as b ON a.memid=b.memid
 WHERE a.firstname LIKE 'David' AND a.surname LIKE 'Farrell'
 ORDER BY b.starttime;
 
+DB EXERCISES PostgreSQL
+
+--SELF JOIN
+--How can you output a list of all members, including the individual who recommended them (if any)? 
+--Ensure that results are ordered by (surname, firstname).
+select distinct recs.firstname as firstname, recs.surname as surname
+	from 
+		cd.members mems
+		inner join cd.members recs
+			on recs.memid = mems.recommendedby
+order by surname, firstname; 
+
+--MULTIPLE JOINS
+--How can you produce a list of all members who have used a tennis court? 
+--Include in your output the name of the court, and the name of the member formatted as a single column. 
+--Ensure no duplicate data, and order by the member name.
+
+SELECT DISTINCT(CONCAT(a.firstname, ' ', a.surname)) as member, c.name as facility
+FROM cd.members as a
+INNER JOIN cd.bookings as b ON a.memid=b.memid 
+INNER JOIN cd.facilities as c ON b.facid=c.facid
+WHERE c.name LIKE 'Tennis Court%'
+ORDER BY member;
+
+--How can you produce a list of bookings on the day of 2012-09-14 which will cost the member (or guest) more than $30? 
+--Remember that guests have different costs to members (the listed costs are per half-hour 'slot'), and the guest user is always 
+--ID 0. Include in your output the name of the facility, the name of the member formatted as a single column, and the cost. 
+--Order by descending cost, and do not use any subqueries.
+
+SELECT CONCAT(a.firstname, ' ', a.surname)as member, c.name, 
+CASE WHEN a.memid = 0 THEN (b.slots*c.guestcost)
+ELSE (b.slots*c.membercost)END as cost
+FROM cd.members as a
+INNER JOIN cd.bookings as b ON a.memid=b.memid 
+INNER JOIN cd.facilities as c ON b.facid=c.facid
+WHERE b.starttime >='2012-09-14' AND b.starttime < '2012-09-15' AND (a.memid=0 AND (b.slots*c.guestcost)>30) OR (a.memid!=0 AND (b.slots*c.membercost)>30)
+ORDER BY cost DESC;
+
+--How can you output a list of all members, including the individual who recommended them (if any), 
+--without using any joins? Ensure that there are no duplicates in the list, and that each firstname + surname 
+--pairing is formatted as a column and ordered.
+
+SELECT distinct a.firstname || ' ' ||  a.surname as member,
+	(
+	 SELECT b.firstname || ' ' || b.surname as recommender 
+	 FROM cd.members b 
+     WHERE b.memid = a.recommendedby
+	)
+FROM cd.members a
+ORDER BY member; 
+
+--The Produce a list of costly bookings exercise contained some messy logic: we had to calculate the booking cost in both the WHERE clause and the CASE statement. 
+--Try to simplify this calculation using subqueries. For reference, the question was:
+--How can you produce a list of bookings on the day of 2012-09-14 which will cost the member (or guest) more than $30? 
+--Remember that guests have different costs to members (the listed costs are per half-hour 'slot'), and the guest user is always 
+--ID 0. Include in your output the name of the facility, the name of the member formatted as a single column, and the cost. 
+--Order by descending cost, and do not use any subqueries.
+
+SELECT CONCAT(a.firstname, ' ', a.surname)as member, c.name, 
+CASE WHEN a.memid = 0 THEN (b.slots*c.guestcost)
+ELSE (b.slots*c.membercost)END as cost
+FROM cd.members as a
+INNER JOIN cd.bookings as b ON a.memid=b.memid 
+INNER JOIN cd.facilities as c ON b.facid=c.facid
+WHERE b.starttime >='2012-09-14' AND b.starttime < '2012-09-15' AND 
+ (
+  CASE WHEN a.memid = 0 THEN (b.slots*c.guestcost)
+ELSE (b.slots*c.membercost)END
+ ) > 30
+ORDER BY cost DESC;
+
