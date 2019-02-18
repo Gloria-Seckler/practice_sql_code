@@ -1,4 +1,5 @@
-# practice_sql_code
+# DQL PRACTICE
+
 SAKILA DB MYSQL
 
 --How can you retrieve all the information from the cd.facilities table?
